@@ -1,5 +1,5 @@
-# Session Handoff — 2026-06-26
+# Session Handoff — 2026-06-27
 
-- **What was done:** Completed PRFAQ PRD for Goal Progress Feedback Loop at `docs/prd-goal-progress-feedback.md` — problem statement, press release, internal/customer FAQs, 6 Given/When/Then user stories, 19 testable acceptance criteria (pace formula, dollar-gap display, error/stale states, no migration), success metrics with counter-metric, and explicit out-of-scope list. Also created `discover.md` and `prd.md` skills earlier in session.
-- **What's next:** Maya review on open questions (schema field confirmation, balance API SLA, stalled-deposit signal); Designer review of status copy and goal detail layout; Compliance review of error states and customer FAQ; sprint kickoff once data model question is answered.
-- **Correction:** User corrected skills layout — kept flat `.claude/skills/discover.md` and deleted duplicate `discover/SKILL.md` subfolder.
+- **What was done:** Pulled engineering constraints from #abc-bank-prd-review (Sairam, May 15 & Jun 27) and incorporated into `docs/prd-goal-progress-feedback.md` and `docs/PRD-FINAL.md` — new Engineering Constraints section, snapshot/rate-limit ACs (AC-20–AC-24), no-migration policy, 30-min stale threshold, client-side recompute.
+- **What's next:** Maya sign-off on snapshot store availability (Open Q2–Q4); sprint planning once open questions answered.
+- **Correction:** Slack channel read via cached Claude Code session log — Cursor session does not have live Slack MCP unless permissions granted.

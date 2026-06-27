@@ -35,7 +35,7 @@ Goal Progress Status is available now to eligible customers on the Lakeview mobi
 
 **1. Does this require a data model migration?**
 
-No. Pace status is a derived value computed at read time from existing goal fields: `target_amount`, `current_amount`, `deadline`, and `created_at`. No new persisted columns are required for MVP. Existing goals created before ship must receive the same calculation using stored field values — no backfill job.
+No migration. Engineering confirmed in #abc-bank-prd-review (Jun 27): *"avoid data migration at all costs."* Pace status is a derived value computed at read time from existing goal fields only: `target_amount`, `current_amount`, `deadline`, and `created_at`. No new persisted columns, no backfill job, no schema change. If any required field is missing on legacy goals, the feature degrades gracefully (hide pace label; show amount-vs-target only) — it does not block ship on a migration.
 
 **2. How is pace calculated?**
 
@@ -52,7 +52,7 @@ Status thresholds are defined in Acceptance Criteria (Section 6). "Stalled" is a
 
 **3. What happens when balance data is stale or the fetch fails?**
 
-The progress status component is hidden. The screen shows an error state with copy ("We couldn't load your latest balance") and a Retry action. A "Last updated [timestamp]" label is shown whenever balance data is displayed. The app must never render a pace status using cached balance older than 24 hours without surfacing the stale-data indicator.
+Goal detail reads from a **cached balance snapshot** — not a live core banking call on every view (see Engineering Constraints). The progress status component is hidden if the snapshot is unavailable. The screen shows an error state with copy ("We couldn't load your latest balance") and a Retry action. A "Last updated [timestamp]" label is shown whenever balance data is displayed. Pace status is never rendered from a snapshot older than **30 minutes** without surfacing the stale-data indicator.
 
 **4. What happens when a goal is deleted, has a zero target, or has no deadline?**
 
@@ -72,6 +72,21 @@ No silent empty states. No crash.
 | `progress_status_shown` | `goal_id`, `status` (on_track \| ahead \| behind \| stalled \| complete) |
 | `progress_status_error` | `goal_id`, `error_type` (fetch_failed \| stale_data \| invalid_goal) |
 | `progress_status_retry_tapped` | `goal_id` |
+
+---
+
+## Engineering Constraints
+
+**Source:** #abc-bank-prd-review — Sairam (Engineering), May 15 & Jun 27 2026
+
+**Hard constraint — Core banking API rate limit:** **50 requests/minute per customer session**, immovable until Q3. Goal Progress Status must be designed against this ceiling.
+
+- **No synchronous core banking calls on goal detail load.** Balance and deposit signals read from a **local/edge snapshot store**, not live core API per view.
+- **Async refresh model.** A background worker refreshes per-customer snapshots on a cadence (every **15 minutes** during active sessions; hourly when idle) and on transaction-posted events where available.
+- **Client-side pace recompute.** Status labels and dollar gaps recompute **client-side** against the cached snapshot. Core API is hit only on explicit **manual refresh** (counts against session rate budget).
+- **Per-session rate budget:** target peak usage **≤30 req/min** per session to leave headroom for auth, transfers, and retries; alert if any session class exceeds **40 req/min p95**.
+- **Graceful degradation on 429.** Serve cached snapshot + non-blocking banner; never block goal viewing or editing.
+- **No data migration.** Use existing goal fields only; no schema changes or backfill (Jun 27).
 
 ---
 
@@ -117,7 +132,7 @@ And I see the dollar gap (e.g., "You're $120 behind pace") — not a percentage 
 
 **US-3 — Stale or failed balance load**
 
-Given the app cannot fetch my current account balance or the data is older than 24 hours  
+Given the cached balance snapshot is unavailable or older than 30 minutes  
 When I open the goal detail screen  
 Then the pace status is not shown  
 And I see an error or stale-data message with a Retry option  
@@ -159,7 +174,7 @@ And the calculation uses my original `created_at` and stored deadline
 - [ ] **AC-4:** Status = **Ahead** when `gap > target_amount × 0.05` (more than 5% of target above expected)
 - [ ] **AC-5:** Status = **On track** when `gap` is between `-target_amount × 0.05` and `+target_amount × 0.05` inclusive
 - [ ] **AC-6:** Status = **Behind** when `gap < -target_amount × 0.05`
-- [ ] **AC-7:** Status = **Stalled** when no deposit to the linked account in 14+ calendar days AND status would otherwise be Behind or On track
+- [ ] **AC-7:** Status = **Stalled** when the cached snapshot shows no deposit to the linked account in 14+ calendar days AND status would otherwise be Behind or On track (deposit signal read from snapshot store — no live core API poll on view)
 
 ### Display (Designer — no mental arithmetic)
 
@@ -170,7 +185,7 @@ And the calculation uses my original `created_at` and stored deadline
 ### Error and edge states (Compliance — never silently fail)
 
 - [ ] **AC-11:** If balance fetch fails, pace status is hidden; error copy and Retry button are shown; `progress_status_error` event fires with `error_type = fetch_failed`
-- [ ] **AC-12:** If balance data is >24 hours old, pace status is hidden; stale-data copy and timestamp are shown; `progress_status_error` fires with `error_type = stale_data`
+- [ ] **AC-12:** If snapshot age is >30 minutes, pace status is hidden; stale-data copy and timestamp are shown; `progress_status_error` fires with `error_type = stale_data`
 - [ ] **AC-13:** If `target_amount = 0`, pace status component is not rendered
 - [ ] **AC-14:** If deadline is null, pace status label is not rendered; amount-vs-target display still works
 - [ ] **AC-15:** If goal is deleted while detail screen is open, user is returned to goal list with no crash
@@ -184,6 +199,14 @@ And the calculation uses my original `created_at` and stored deadline
 
 - [ ] **AC-18:** Given identical goal data (`target_amount`, `current_amount`, `deadline`, `created_at`) and balance freshness, iOS and Android render the same status label (Complete, Ahead, On track, Behind, or Stalled per AC-3–AC-7) and the same dollar-gap value in primary copy (AC-8)
 - [ ] **AC-19:** Editing target or deadline recalculates status on next screen load without app restart
+
+### Engineering constraints (rate limit and snapshot architecture)
+
+- [ ] **AC-20:** Opening goal detail does **not** call the core banking balance API; `current_amount` is read from the cached snapshot only
+- [ ] **AC-21:** Pace status and dollar gap recompute client-side from snapshot + goal fields within 1 second (p95); no core API call on recompute
+- [ ] **AC-22:** Manual Refresh triggers one snapshot refresh request; button is disabled with explanatory tooltip when session rate budget is exhausted
+- [ ] **AC-23:** On core API 429 response, goal detail still renders from last cached snapshot with a non-blocking banner; pace status is hidden if snapshot age exceeds AC-12 threshold
+- [ ] **AC-24:** Telemetry alerts when any session class exceeds 40 req/min p95 during goal-detail flows
 
 ---
 
@@ -221,6 +244,7 @@ And the calculation uses my original `created_at` and stored deadline
 
 ## Open Questions for Engineering Sign-off
 
-1. Confirm existing goal schema includes `target_amount`, `current_amount`, `deadline`, and `created_at` — if any field is missing, document the minimal addition required before sprint kickoff.
-2. Confirm source of `current_amount` (linked account balance API) and SLA for freshness.
-3. Confirm deposit-activity signal for "Stalled" status — transaction feed availability and 14-day lookback feasibility.
+1. Confirm existing goal schema includes `target_amount`, `current_amount`, `deadline`, and `created_at` on all in-flight goals — if a field is missing, confirm graceful degradation path (no migration).
+2. Is the balance/transaction **snapshot store** already in place, or net-new work for this sprint?
+3. Are transaction-posted webhooks reliable enough to refresh snapshots between 15-min cadence, or is batch refresh the source of truth?
+4. Confirm deposit-activity signal for "Stalled" (AC-7) is available in the snapshot store with 14-day lookback — not via live core API poll.
