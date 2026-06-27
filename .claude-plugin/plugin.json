@@ -1,6 +1,6 @@
 {
   "name": "abc-bank-pm-os",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "PM operating system for bank product teams: /discover and /prd skills, four reviewer agents (engineering, executive, customer, compliance), and a hook that blocks final PRDs without a Compliance section.",
   "keywords": [
     "product-management",
