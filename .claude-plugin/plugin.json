@@ -1,0 +1,28 @@
+{
+  "name": "abc-bank-pm-os",
+  "version": "1.0.0",
+  "description": "A product-management operating system for bank PMs working in Claude Code. It packages /discover and /prd skills for Opportunity Solution Tree discovery and PRFAQ-format PRDs; four reviewer agents (engineer-reviewer with project memory, exec-reviewer, customer-advocate, and compliance-reviewer) for parallel artifact review before sprint planning; and a PreToolUse hook that blocks saving final PRD files without a ## Compliance section. Built for retail banking product teams shipping regulated mobile features who want repeatable PM workflows, stakeholder-aware specs, and compliance guardrails embedded in the toolchain—not ad hoc prompts.",
+  "keywords": [
+    "product-management",
+    "banking",
+    "prd",
+    "discovery",
+    "compliance",
+    "reviewers"
+  ],
+  "skills": "./.claude/skills/",
+  "agents": "./.claude/agents/",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PLUGIN_ROOT}/.claude/hooks/require-compliance-section.sh\""
+          }
+        ]
+      }
+    ]
+  }
+}

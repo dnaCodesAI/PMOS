@@ -1,0 +1,12 @@
+# Local secrets and environment
+.env
+.env.*
+!.env.example
+
+# Claude local credentials (if ever present under project)
+**/.credentials.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.claude/settings.local.json
