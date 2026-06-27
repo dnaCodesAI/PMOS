@@ -1,5 +1,29 @@
 # Package abc-bank-pm-os for Claude Cowork upload (.zip and .plugin)
 $ErrorActionPreference = "Stop"
+Add-Type -AssemblyName System.IO.Compression
+Add-Type -AssemblyName System.IO.Compression.FileSystem
+
+function New-PluginZip {
+    param(
+        [string]$SourceDir,
+        [string]$DestinationZip
+    )
+
+    if (Test-Path $DestinationZip) {
+        Remove-Item $DestinationZip -Force
+    }
+
+    $zip = [System.IO.Compression.ZipFile]::Open($DestinationZip, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        Get-ChildItem -Path $SourceDir -Recurse -File | ForEach-Object {
+            $relative = $_.FullName.Substring($SourceDir.Length).TrimStart('\', '/').Replace('\', '/')
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $_.FullName, $relative) | Out-Null
+        }
+    }
+    finally {
+        $zip.Dispose()
+    }
+}
 
 $root = $PSScriptRoot
 $staging = Join-Path $env:TEMP "abc-bank-pm-os-plugin"
@@ -16,14 +40,16 @@ Copy-Item (Join-Path $root ".claude\skills") (Join-Path $staging ".claude\skills
 Copy-Item (Join-Path $root ".claude\agents") (Join-Path $staging ".claude\agents") -Recurse -Force
 Copy-Item (Join-Path $root ".claude\hooks") (Join-Path $staging ".claude\hooks") -Recurse -Force
 
-if (Test-Path $zipPath) { Remove-Item $zipPath -Force }
-Compress-Archive -Path (Join-Path $staging "*") -DestinationPath $zipPath -Force
+New-PluginZip -SourceDir $staging -DestinationZip $zipPath
 Copy-Item $zipPath $pluginPath -Force
 
 Remove-Item $staging -Recurse -Force
 
-Write-Host "Packaged plugin:"
+Write-Host "Packaged plugin (forward-slash paths):"
 Write-Host "  $zipPath"
 Write-Host "  $pluginPath"
+Write-Host ""
+Write-Host "Zip entries:"
+[System.IO.Compression.ZipFile]::OpenRead($zipPath).Entries | ForEach-Object { Write-Host "  $($_.FullName)" }
 Write-Host ""
 Write-Host "Upload abc-bank-pm-os.zip in Cowork -> Customize -> Personal plugins -> Upload plugin"
