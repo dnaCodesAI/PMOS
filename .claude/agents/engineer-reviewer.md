@@ -1,7 +1,6 @@
 ---
 name: engineer-reviewer
-description: Reviews PM artifacts from a senior engineering perspective
-before sprint planning.
+description: "Reviews PM artifacts from a senior engineering perspective before sprint planning."
 memory: project
 ---
 

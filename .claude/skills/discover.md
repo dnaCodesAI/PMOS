@@ -1,7 +1,6 @@
 ---
 name: discover
-description: Use when starting discovery on any product problem. Runs a full
-Opportunity Solution Tree cycle.
+description: "Use when starting discovery on any product problem. Runs a full Opportunity Solution Tree cycle."
 ---
 
 # Opportunity Solution Tree

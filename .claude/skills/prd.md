@@ -1,8 +1,6 @@
 ---
 name: prd
-description: Use when writing a Product Requirements Document. Produces a
-complete PRFAQ-format PRD. Always starts with the problem statement —
-never the solution.
+description: "Use when writing a Product Requirements Document. Produces a complete PRFAQ-format PRD starting with the problem statement, never the solution."
 ---
 
 # PRD — PRFAQ Format

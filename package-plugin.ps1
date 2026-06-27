@@ -35,10 +35,11 @@ Remove-Item $staging -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Path $staging -Force | Out-Null
 New-Item -ItemType Directory -Path $dist -Force | Out-Null
 
+# Standard plugin layout: skills/, agents/, hooks/ at package root
 Copy-Item (Join-Path $root ".claude-plugin") (Join-Path $staging ".claude-plugin") -Recurse -Force
-Copy-Item (Join-Path $root ".claude\skills") (Join-Path $staging ".claude\skills") -Recurse -Force
-Copy-Item (Join-Path $root ".claude\agents") (Join-Path $staging ".claude\agents") -Recurse -Force
-Copy-Item (Join-Path $root ".claude\hooks") (Join-Path $staging ".claude\hooks") -Recurse -Force
+Copy-Item (Join-Path $root ".claude\skills") (Join-Path $staging "skills") -Recurse -Force
+Copy-Item (Join-Path $root ".claude\agents") (Join-Path $staging "agents") -Recurse -Force
+Copy-Item (Join-Path $root ".claude\hooks") (Join-Path $staging "hooks") -Recurse -Force
 
 New-PluginZip -SourceDir $staging -DestinationZip $zipPath
 Copy-Item $zipPath $pluginPath -Force
